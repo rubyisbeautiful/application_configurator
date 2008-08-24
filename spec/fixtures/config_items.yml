@@ -1,0 +1,10 @@
+admin:
+  application:
+    user: quentin
+    group: quentin
+  something:
+    other: foo
+content:
+  application:
+    user: quentin
+    group: quentin
