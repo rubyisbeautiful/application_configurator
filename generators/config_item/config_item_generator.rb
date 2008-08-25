@@ -1,4 +1,4 @@
-class ApplicationConfiguratorGenerator < Rails::Generator::NamedBase
+class ConfigItemGenerator < Rails::Generator::NamedBase
   def manifest
     record do |m|
       m.directory "app/models"
