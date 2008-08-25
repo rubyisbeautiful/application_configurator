@@ -2,7 +2,7 @@ Description:
     Explain the generator
 
 Example:
-    ./script/generate application_configurator Thing
+    ./script/generate config_item
 
     This will create:
-        what/will/it/create
+        app/models/config_item.rb
