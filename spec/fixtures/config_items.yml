@@ -1,10 +1,15 @@
-admin:
-  application:
-    user: quentin
-    group: quentin
-  something:
-    other: foo
-content:
-  application:
-    user: quentin
-    group: quentin
+Car:
+  Body:
+    Interior:
+      Seat: bucket
+    Fenders:
+      Rear: right
+  Engine:
+    Fuel: filter
+    
+# should create
+# 
+# h? yes car -- 
+# h? yes   body -- 
+# h? yes    interior --
+# h? no      seat -- bucket
