@@ -65,8 +65,6 @@ class ConfigItem < ActiveRecord::Base
       virgin.push(h)
       while !virgin.empty?
         current = virgin.pop
-        puts "current is a #{current.class}"
-        puts "current as a sring is #{current}"
         n = current.is_a?(Hash) ? current.keys.first : current
         p = visited.current.blank? ? nil : visited.current
         new_ci = visit(n, p)
@@ -80,7 +78,6 @@ class ConfigItem < ActiveRecord::Base
     end
     
     def visit(name, parent=nil)
-      puts "creating #{name} with parent #{parent}"
       if parent.nil?
         ci = create_root(:param_name => "configuration")
       else
