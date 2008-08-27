@@ -1,8 +1,11 @@
 Description:
-    Explain the generator
+    Sorry no cmdline options or anything good yet
 
 Example:
-    ./script/generate config_item
+    ./script/generate config_item ConfigItem
 
     This will create:
         app/models/config_item.rb
+        app/controllers/config_items_controller.rb
+        app/views/config_items/index.html.haml
+        db/migrations/_create_config_items.rb
