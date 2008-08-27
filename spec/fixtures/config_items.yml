@@ -6,10 +6,5 @@ Car:
       Rear: right
   Engine:
     Fuel: filter
-    
-# should create
-# 
-# h? yes car -- 
-# h? yes   body -- 
-# h? yes    interior --
-# h? no      seat -- bucket
+    Car:
+      Bogus: foo

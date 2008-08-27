@@ -1,8 +1,11 @@
 class FiloStack
   @stack
+  @name
+  attr_accessor :name
   
-  def initialize
+  def initialize(name)
     @stack = []
+    @name = name
   end
   
   def push(thing)
@@ -23,6 +26,18 @@ class FiloStack
     else
       return @stack.last
     end
+  end
+  
+  def size
+    @stack.length
+  end
+  
+  def to_s
+    result = []
+    @stack.each do |stack|
+      result << stack.class.to_s
+    end
+    return "#{name}[#{size}]: #{result.join(' -- ')}"
   end
 end
 
