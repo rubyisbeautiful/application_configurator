@@ -1,0 +1,1 @@
+%li= "Name: #{config_item.param_name} -- Value: #{config_item.param_value}"

@@ -17,6 +17,8 @@ class ConfigItemGenerator < Rails::Generator::NamedBase
       
       # views
       m.template("index_html_haml.rb", "app/views/config_items/index.html.haml", :collision => :ask)
+      m.template("_show_html_haml.rb", "app/views/config_items/_show.html.haml", :collision => :ask)
+      m.template("_children_html_haml.rb", "app/views/config_items/_children.html.haml", :collision => :ask)
       
       # migration
       if Dir.glob("db/migrate/*_create_config_items.rb").empty?
