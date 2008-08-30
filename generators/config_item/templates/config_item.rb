@@ -106,18 +106,19 @@ class ConfigItem < ActiveRecord::Base
     #      foo.update_attributes(:read_only => true)
     #    end
   
-    # generate a new application.yml based on the values currently loaded in @@items
-    # def to_application_yaml
-    #      y = Hash.new
-    #      all(:order => "param_name").each do |ci|
-    #        pieces = ci.param_name.split("_")
-    #        section = pieces.shift
-    #        y[section] = {} if y[section].blank?
-    #        y[section][pieces.join("_")]=ci.param_value
-    #      end
-    #      return y.to_yaml
-    #    end
-        
+    # Generates a new application.yml based on the values currently in db
+    # Creates a timestamped backup from the existing one
+    def to_application_yaml
+      # result = ""
+      #     os = FiloStack.new("open")
+      #     cs = FifoStack.new("closed")
+      #     os.push(ConfigItem.root)
+      #     begin
+      #       current = os.pop
+      #       result << current.to_yaml
+      #       os.push
+    end
+    
     protected
     #--
     # TODO: refactor this
@@ -233,6 +234,96 @@ class ConfigItem < ActiveRecord::Base
   
   def parent
     self.class.find(parent_id)
+  end
+  
+  # # TODO: use real YAML builder stuff
+  #   def to_yaml_with_humans(options={})
+  #     options[:indent]  ||= 0
+  #     "#{param_name}: #{param_value}"
+  #   end
+  #   alias_method_chain :to_yaml, :humans
+  
+  # The delta represents the "width" of the nested set node, and can be used to determine if one node fits inside of another
+  def delta
+    return rgt-lft
+  end
+  
+  def child_of?(other)
+    return (other.rgt > rgt) && (other.lft < lft)
+  end
+  
+  def parent_of?(other)
+    return (lft < other.lft) && (rgt > other.rgt)
+  end
+  
+  def hash_key
+    param_name.downcase.to_sym
+  end
+  
+  def <=>(other)
+    case
+    when parent_id < other.parent_id
+      -1
+    when parent_id == other.parent_id
+      0
+    when parent_id > other.parent_id
+      1
+    end
+  end
+  
+  def to_h
+    primer = get
+    os = FiloStack.new("open")
+    cs = FifoStack.new("closed")
+    result = {}
+    begin # until primer is empty
+      os.push(primer.pop)
+      current = os.pop
+      begin # until os is empty
+        if current.has_children?
+          os.push(current)
+        else
+          
+      
+  end
+  
+  def to_s
+    "#{param_name}: #{param_value}"
+  end
+  
+  def get(level=99)
+    # TODO: do actual levels
+    # for now, you get self, direct, or all :)
+    # return them in the right order to be stuffed into a FiloStack
+    case level
+    # 0 means self
+    when 0
+      return self
+    # 1 means direct children
+    when 1
+      return direct_children
+    # above 1 means children of children
+    else
+      oq = FiloStack.new("open")
+      cq = FifoStack.new("closed")
+      oq.push(self)
+      begin
+        current = oq.pop
+        if current.has_children?
+          cq.push(current)
+          current.direct_children.each do |child|
+            oq.push(child)
+          end
+        else
+          cq.push(current)
+        end
+      end until oq.empty?
+      return cq
+    end
+  end
+  
+  def has_children?
+    (delta == 1) ? false : true
   end
   
   # TODO: to_xml

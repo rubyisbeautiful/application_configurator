@@ -24,12 +24,20 @@ class Stack
     @stack.length
   end
   
-  def to_s
-    result = []
-    @stack.each do |stack|
-      result << stack.class.to_s
+  def to_s(verbose=false)
+    if verbose
+      result = "#{self.class}--(#{name})[#{size}]\n"
+      @stack.length.times do |index|
+        result << "#{' '*index}--[#{index}] -- #{@stack[index].to_s}\n"
+      end
+      return result
+    else
+      result = []
+      @stack.each do |element|
+        result << element.class.to_s
+      end
+      return "#{name}[#{size}]: #{result.join(' -- ')}"
     end
-    return "#{name}[#{size}]: #{result.join(' -- ')}"
   end
   
   def to_a
