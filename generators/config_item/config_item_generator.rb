@@ -9,7 +9,17 @@ class ConfigItemGenerator < Rails::Generator::NamedBase
   def manifest
     record do |m|
       
-      @rspec = Gem.available?("rspec") && !options[:norspec]
+      begin
+        gem 'rspec'
+        gem_rspec = true
+      rescue
+        gem_rspec = false
+      end
+      
+      @rspec = gem_rspec && !options[:norspec]
+      
+      #-- only in cool newer versions of gem 
+      #-- Gem.available?("rspec") && !options[:norspec]
         
       # directories
       m.directory "app/models"
