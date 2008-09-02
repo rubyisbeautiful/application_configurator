@@ -91,6 +91,7 @@ class ConfigItem < ActiveRecord::Base
       linked_list_to_nested_set(linked_list)
       # TODO: should call something else to save the result of the previous call -- save_to_db(nested_set)
     end
+    alias_method :read_from_yaml, :read_from_yml
         
     # pre-Load db rows into the @@items hash
     # def load_from_db

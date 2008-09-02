@@ -1,13 +1,20 @@
 ApplicationConfigurator
 =======================
 
-Coming soon
+Application Configuration for your Rails app
 
 
 Example
 =======
 
-awesome
+Install Plugin
+# the model name is set right now, sorry, will allow it to change soon
+
+Generator: config_item [options] ConfigItem
+# Example: script/generate config_item ConfigItem
+  # options:
+  #   --norspec     don't generate rspec stuff
+  #   --force       overwrite without asking
 
 
 Copyright (c) 2008 [name of plugin creator], released under the MIT license

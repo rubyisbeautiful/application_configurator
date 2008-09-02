@@ -9,11 +9,18 @@ class ConfigItemGenerator < Rails::Generator::NamedBase
   def manifest
     record do |m|
       
+      @rspec = Gem.available?("rspec") && !options[:norspec]
+        
       # directories
       m.directory "app/models"
       m.directory "db/migrate"
       m.directory "app/controllers"
       m.directory "app/views/config_items"
+      if @rspec
+        m.directory "spec/models"
+        m.directory "spec/controllers"
+        m.directory "spec/fixtures"
+      end
       
       # models
       m.template("config_item.rb", "app/models/config_item.rb", :collision => options[:collision])
@@ -25,6 +32,16 @@ class ConfigItemGenerator < Rails::Generator::NamedBase
       m.template("index_html_haml.rb", "app/views/config_items/index.html.haml", :collision => options[:collision])
       m.template("_show_html_haml.rb", "app/views/config_items/_show.html.haml", :collision => options[:collision])
       m.template("_children_html_haml.rb", "app/views/config_items/_children.html.haml", :collision => options[:collision])
+      
+      # specs
+      if @rspec
+        m.template("config_item_model_spec.rb", "spec/models/config_item_spec.rb", :collision => options[:collision])
+        m.template("config_items_controller_spec.rb", "spec/controllers/config_items_controller_spec.rb", :collision => options[:collision])
+        m.template("config_items_yml.rb", "spec/fixtures/config_items.yml", :collision => options[:collision])
+      end
+      
+      # routing
+      # TODO: add routes
       
       # migration
       if Dir.glob("db/migrate/*config_items.rb").empty?
