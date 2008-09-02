@@ -109,14 +109,12 @@ class ConfigItem < ActiveRecord::Base
     # Generates a new application.yml based on the values currently in db
     # Creates a timestamped backup from the existing one
     def to_application_yaml
-      # result = ""
-      #     os = FiloStack.new("open")
-      #     cs = FifoStack.new("closed")
-      #     os.push(ConfigItem.root)
-      #     begin
-      #       current = os.pop
-      #       result << current.to_yaml
-      #       os.push
+      ConfigItem.root.to_h['root'].to_yaml
+    end
+    
+    # Return the root node of all nodes
+    def root
+      find(:all, :order => "lft ASC, rgt DESC").first
     end
     
     protected
@@ -233,6 +231,7 @@ class ConfigItem < ActiveRecord::Base
   end
   
   def parent
+    return nil if parent_id.nil?
     self.class.find(parent_id)
   end
   
@@ -260,6 +259,10 @@ class ConfigItem < ActiveRecord::Base
     param_name.downcase.to_sym
   end
   
+  def yaml_key
+    param_name
+  end
+  
   def <=>(other)
     case
     when parent_id < other.parent_id
@@ -272,19 +275,42 @@ class ConfigItem < ActiveRecord::Base
   end
   
   def to_h
-    primer = get
-    os = FiloStack.new("open")
-    cs = FifoStack.new("closed")
-    result = {}
-    begin # until primer is empty
-      os.push(primer.pop)
-      current = os.pop
-      begin # until os is empty
-        if current.has_children?
-          os.push(current)
-        else
-          
+    os = get
+    cs = []
+    root = OpenStruct.new(:obj => nil, :key => nil, :value => {}, :parent => nil)
+    cs.push(root)
+    ci_os = Hash.new(root)
+    os.push self
+    parent_ci = nil
+    until os.empty?
       
+      #-- set the current node
+      node_ci = os.pop      
+      #-- set the ci_os map and any children
+      if node_ci.has_children?
+        node_os = OpenStruct.new(:obj => node_ci, :key => node_ci.yaml_key, :value => {}, :parent => ci_os[node_ci.parent])
+      else
+        node_os = OpenStruct.new(:obj => node_ci, :key => node_ci.yaml_key, :value => node_ci.param_value, :parent => ci_os[node_ci.parent])
+      end
+      parent_ci = node_ci
+      
+      #-- Map this node
+      ci_os[node_ci] = node_os
+      #-- push this node onto the cs
+      cs << node_os
+    end
+    
+    cs.pop #-- get rid of root?
+    cs.each do |os_elem|
+      parent = os_elem.parent
+      next if parent.nil?
+      # puts "os_elem: #{os_elem}"
+      parent.value[os_elem.key] = os_elem.value
+    end
+    # root.value[cs.first.key]=cs.first.value
+    return cs.first.value
+    #-- finally return our hash
+    # ci_os[self].h
   end
   
   def to_s

@@ -16,4 +16,21 @@ class ConfigItemsController < ApplicationController
     render :partial => 'children.html.haml', :locals => { :children => children } and return false
   end
   
+  def export
+    begin
+      root = RAILS_ROOT
+      old_file = RAILS_ROOT + "/config/application.yml"
+      FileUtils.mv(old_file, old_file + ".#{Time.now.to_formatted_s(:number)}") if File.exists? old_file
+      @result = ConfigItem.to_application_yaml
+      File.open(old_file,"w") do |f|
+        f.puts @result
+      end
+      flash[:notice] = "Successfully generated new config file"
+    rescue StandardError => e
+      flash[:notice] = "Couldn't generate new config file"
+      logger.debug e.message
+      logger.debug e.backtrace
+    end
+    redirect_to config_items_path and return false
+  end
 end
