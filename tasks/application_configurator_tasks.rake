@@ -16,7 +16,7 @@ namespace :application do
   
   desc "Bootstrap the application configuration by loading from application.yml"
   task :bootstrap => :environment do
-    ConfigItem.read_from_yml
+    ConfigItem.from_hash
   end
   
 end

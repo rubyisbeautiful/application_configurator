@@ -19,29 +19,7 @@ class ConfigItem < ActiveRecord::Base
     #   ConfigItem.dig(1)
     #     -> { 0 => [top_level_one, top_level_two]>, 1 => [second_level_one] }
     def dig(level=1)
-      result = {}
-      level.times do |key|
-        result[key+1] = []
-      end
-      parents = find(:all, :conditions => { :lft => 1 })
-      #-- there should only be one root, but can we count on it?
-      #-- level should now be greater than 0 since we've gotten roots
-      oq = FifoStack.new("open")
-      # cq = FifoStack.new("closed")
-      #-- load the q with the root nodes
-      oq.push parents
-      #-- start iterating
-      level.times do |key|
-        #-- pop an array off
-        current = oq.pop
-        #-- iterate through the array, adding each to the results hash by level and pushing any children onto the open q
-        current.each do |node|
-          result[key+1] = node.direct_children
-          oq.push(node.direct_children)
-        end
-      end
-      #-- return the hash, keyed by level
-      return result
+      all.reject{ |foo| foo.level != level }
     end
       
     
@@ -88,11 +66,47 @@ class ConfigItem < ActiveRecord::Base
       h = YAML.load_file(target)
       raise StandardError.new("Configuration not loaded!") if h.blank?
       linked_list = hash_to_linked_list(h)
-      linked_list_to_nested_set(linked_list)
+      return linked_list_to_nested_set(linked_list)
       # TODO: should call something else to save the result of the previous call -- save_to_db(nested_set)
     end
     alias_method :read_from_yaml, :read_from_yml
-        
+    
+    def from_hash(target = File.expand_path(File.dirname(__FILE__) + '/../../config/application.yml'))
+      h = YAML.load_file(target)
+      q = FiloStack.new("open")
+      root_os = OpenStruct.new(:obj => nil, :key => 'root', :value => h, :parent => nil)
+      q.push root_os
+      until q.empty?
+        #-- set the current node
+        node_os = q.pop
+        #-- set the node_ci by creating one from this os
+        val = node_os.value.is_a?(String) ? node_os.value : nil
+        if node_os.parent.nil?
+          node_ci = new(:param_name => node_os.key, :param_value => val, :lft => nil, :rgt => nil, :parent_id => nil)
+        else
+          node_ci = new(:param_name => node_os.key, :param_value => val)
+        end
+        node_ci.save!
+        #-- set the node_os.obj to the ci we just created
+        node_os.obj = node_ci
+        #-- add_child it to its parent to set up the left and right columns
+        #-- if node_os.parent is nil then we are currently on root
+        unless node_os.parent.nil?
+          begin
+            node_ci.move_to_child_of node_os.parent.obj
+          rescue StandardError => e
+            raise e
+          end
+        end
+        #-- push any children onto the stack, unless it's a string, then we let it go
+        if node_os.value.is_a?(Hash)
+          node_os.value.each_key do |child_key|
+            q.push OpenStruct.new(:obj => nil, :key => child_key, :value => node_os.value[child_key], :parent => node_os)
+          end
+        end
+      end
+    end
+    
     # pre-Load db rows into the @@items hash
     # def load_from_db
     #      @@items = {}
@@ -113,95 +127,7 @@ class ConfigItem < ActiveRecord::Base
       ConfigItem.root.to_h['root'].to_yaml
     end
     
-    # Return the root node of all nodes
-    def root
-      find(:all, :order => "lft ASC, rgt DESC").first
-    end
-    
-    protected
-    #--
-    # TODO: refactor this
-    # converts the hash returned from a YAML read into a list of linked OpenStructs
-    #++
-    def hash_to_linked_list(h)
-      list = []
-      q = FiloStack.new("stack")
-      current = nil
-      depth = 0
-      parent = OpenStruct.new(:obj => h, :name => "root", :value => nil, :parent => nil, :depth => depth)
-      q.push parent
-      list << parent
-      begin
-        current = q.pop
-        case current.obj
-        when OpenStruct
-          parent = current
-          current.obj.each_key do |key|
-            q.push OpenStruct.new(:obj => current.obj[key], :name => key, :value => nil, :parent => parent, :depth => parent.depth+1)
-            list << q.current
-          end
-        when Hash
-          parent = current
-          current.obj.each_key do |key|
-            #-- look ahead even more, if the next child is a string, add it to this value instead
-            if current.obj[key].is_a?(String)
-              q.push OpenStruct.new(:obj => nil, :name => key, :value => current.obj[key], :parent => parent, :depth => parent.depth+1)
-            else
-              q.push OpenStruct.new(:obj => current.obj[key], :name => key, :value => nil, :parent => parent, :depth => parent.depth+1)
-            end
-            list << q.current
-          end
-        when String
-        when nil
-          next
-        end
-      end until q.empty?
-      return list.sort{ |a,b| a.depth <=> b.depth }
-    end
-    
-    #--
-    # TODO: refactor this
-    # converts the array of OpenStructs returned from hash_to_linked_list
-    #++
-    def linked_list_to_nested_set(list)
-      total = list.length
-      s = Set.new(list)
-      #-- do we still need the by_parents thing?
-      by_parents = s.classify{ |os| os.parent }
-      #-- instead of doing it by parent, maybe by depth?
-      by_depth = s.classify{ |os| os.depth }
-      #-- nil as a parent means it is the root, so create it
-      root_os = by_parents.delete(nil).find{|x|true}
-      root_ci = create(:param_name => root_os.name, :param_value => root_os.value)
-      #-- PENDING? make sure the by_parents hash is sorted correctly
-      os_ci = {}
-      #-- seed the os_ci with the root
-      os_ci[root_os] = root_ci
-      #-- go to each parent, which is an OS
-      #-- by_parents.each_key do |parent_os|
-      by_depth.each_key do |depth|
-        by_depth[depth].to_a.each do |parent_os|
-          #-- first look for a ci for this parent_os
-          if os_ci.has_key?(parent_os)
-            parent_ci = os_ci[parent_os]
-          else
-          #-- there wasn't already one, so create a ConfigItem from this OS
-            parent_ci = create(:param_name => parent_os.name, :param_value => parent_os.value)
-            #-- and add it to to the os_ci map
-            os_ci[parent_os] = parent_ci
-          end
-          #-- parent_ci and parent_os should both be set and valid now, as well as be in the map
-          #-- look for IT'S parent so we can add_child to it
-          grandparent_os = parent_os.parent
-          if os_ci.has_key?(grandparent_os)
-          #-- the grandparent -- or parent of this parent -- was already created
-          #-- assuming these are being created in depth order, we shouldn't have to create the grandparent here
-            os_ci[grandparent_os].add_child(parent_ci)
-          end
-        end
-      end
-    end
-    
+    # protected
   end
   
   # A convenience method for accessing top-level params by key in a Hash-like way
@@ -220,21 +146,20 @@ class ConfigItem < ActiveRecord::Base
   #    ConfigItem[:foo_with_children][:bar] -> "baz"
   #
   def [](arg)
+    #-- FKC this took all day to figure out.  nested set uses stupid bracket method instead of attributes
+    #-- so check first if it is a netsed set structure column
+    if %w( lft rgt parent_id ).include? arg
+      return read_attribute(arg)
+    end
     return nil if arg.blank?
-    #--
-    # TODO: do an all_children call, or use db via class method?
-    # really it should be the lowest depth ergo most children that we find, since there is 
-    # no column for this (should there be?) have to do max of right-left
-    #++
-    tmp = self.class.find(:all, :conditions => { :param_name => arg.to_s, :parent_id => id })
-    return nil if tmp.blank?
-    return tmp.max{ |a,b| (a.rgt - a.lft) <=> (b.rgt - b.lft) }
+    tmp = direct_children.detect{ |child| child.param_name == arg.to_s } #(:all, :conditions => { :param_name => arg.to_s })
+    if tmp.all_children_count == 0
+      return tmp.param_value
+    else
+      return tmp
+    end
   end
   
-  def parent
-    return nil if parent_id.nil?
-    self.class.find(parent_id)
-  end
   
   # # TODO: use real YAML builder stuff
   #   def to_yaml_with_humans(options={})
