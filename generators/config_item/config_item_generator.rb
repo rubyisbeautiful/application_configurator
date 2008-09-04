@@ -42,6 +42,7 @@ class ConfigItemGenerator < Rails::Generator::NamedBase
       m.template("index_html_haml.rb", "app/views/config_items/index.html.haml", :collision => options[:collision])
       m.template("_show_html_haml.rb", "app/views/config_items/_show.html.haml", :collision => options[:collision])
       m.template("_children_html_haml.rb", "app/views/config_items/_children.html.haml", :collision => options[:collision])
+      m.template("_edit_html_haml.rb", "app/views/config_items/_edit.html.haml", :collision => options[:collision])
       
       # specs
       if @rspec
