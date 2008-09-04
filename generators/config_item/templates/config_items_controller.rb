@@ -33,4 +33,15 @@ class ConfigItemsController < ApplicationController
     end
     redirect_to config_items_path and return false
   end
+
+  def edit
+    config_item = ConfigItem.find(params[:id])
+    render :partial => 'edit', :locals => {:config_item => config_item}
+  end  
+  
+  def update
+    config_item = ConfigItem.find(params[:id])
+    config_item.update_attributes(params[:config_item])
+    render :partial => 'show', :locals => {:config_item => config_item}
+  end  
 end
