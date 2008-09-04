@@ -45,7 +45,7 @@ class ConfigItem < ActiveRecord::Base
       # no column for this (should there be?) have to do max of right-left
       #++
       tmp = find(:all, :conditions => { :param_name => arg.to_s.downcase })
-      return nil if tmp.blank?
+      return {} if tmp.blank?
       return tmp.max{ |a,b| (a.rgt - a.lft) <=> (b.rgt - b.lft) }   
      end
   
@@ -157,14 +157,15 @@ class ConfigItem < ActiveRecord::Base
     if %w( lft rgt parent_id ).include? arg
       return read_attribute(arg)
     end
-    return nil if arg.blank?
+    return {} if arg.blank?
     tmp = direct_children.detect{ |child| child.param_name == arg.to_s } #(:all, :conditions => { :param_name => arg.to_s })
-    return nil if tmp.nil?
+    return {} if tmp.nil?
     if tmp.all_children_count == 0
       return tmp.param_value
     else
       return tmp
     end
+    return {}
   end
   
   
