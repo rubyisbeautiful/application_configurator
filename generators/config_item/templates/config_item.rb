@@ -152,6 +152,7 @@ class ConfigItem < ActiveRecord::Base
   #    ConfigItem[:foo_with_children][:bar] -> "baz"
   #
   def [](arg)
+    logger.debug "looking for #{arg}"
     #-- FKC this took all day to figure out.  nested set uses stupid bracket method instead of attributes
     #-- so check first if it is a netsed set structure column
     if %w( lft rgt parent_id ).include? arg
