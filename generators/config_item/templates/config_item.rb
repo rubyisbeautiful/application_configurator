@@ -101,7 +101,13 @@ class ConfigItem < ActiveRecord::Base
         #-- push any children onto the stack, unless it's a string, then we let it go
         if node_os.value.is_a?(Hash)
           node_os.value.each_key do |child_key|
-            q.push OpenStruct.new(:obj => nil, :key => child_key, :value => node_os.value[child_key], :parent => node_os)
+            if node_os.value[child_key].is_a? Hash
+              q.push OpenStruct.new(:obj => nil, :key => child_key, :value => node_os.value[child_key], :parent => node_os)
+            else
+              child_ci = new(:param_name => child_key, :param_value => node_os.value[child_key])
+              child_ci.save!
+              child_ci.move_to_child_of node_ci
+            end
           end
         end
       end
@@ -153,6 +159,7 @@ class ConfigItem < ActiveRecord::Base
     end
     return nil if arg.blank?
     tmp = direct_children.detect{ |child| child.param_name == arg.to_s } #(:all, :conditions => { :param_name => arg.to_s })
+    return nil if tmp.nil?
     if tmp.all_children_count == 0
       return tmp.param_value
     else
